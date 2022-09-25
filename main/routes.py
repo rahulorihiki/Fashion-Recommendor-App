@@ -1,10 +1,38 @@
-from textwrap import indent
-from flask import render_template,url_for,request
-from main import app , connection1 , Products , db
+
+from flask import render_template,url_for,request,redirect,flash
+from main import app , connection1 , Products , db , User , Admin , login_manager , User123
 import json
+from flask_bootstrap import Bootstrap
+from flask_wtf import FlaskForm 
+from wtforms import StringField, PasswordField, BooleanField
+from wtforms.validators import InputRequired, Email, Length , ValidationError
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import login_user
 
 
+@login_manager.user_loader
+def load_user(user_id):
+    return db.session.query(User).get(int(user_id))
 
+class LoginForm(FlaskForm):
+    username = StringField('Username', validators=[InputRequired(), Length(min=4, max=15)])
+    password = PasswordField('Password', validators=[InputRequired(), Length(min=8, max=80)])
+    remember = BooleanField('Remember me')
+
+class RegisterForm(FlaskForm):
+    email = StringField('Email', validators=[InputRequired(), Email(message='Invalid email'), Length(max=50)])
+    username = StringField('Username', validators=[InputRequired(), Length(min=4, max=15)])
+    password = PasswordField('Password', validators=[InputRequired(), Length(min=8, max=80)])
+
+    def validate_username(self , username):
+        user =  db.session.query(User).filter_by(username = username.data).first()
+        if user:
+            raise ValidationError('That Username is taken. Please choose a new one')
+    
+    def validate_email(self , email):
+        user =  db.session.query(User).filter_by(email = email.data).first()
+        if user:
+            raise ValidationError('That email is taken. Please choose a new one')
 
 cursor1 = connection1.cursor()
 cursor1.execute("SELECT DISTINCT articleType FROM 'products' ")
@@ -118,3 +146,51 @@ def product_detail():
     len1 = len(data_obj['productAttribute'])
     len2 = len(data_obj['brandInfo'])
     return render_template("detail.html" , data_obj = data_obj , len1 = len1 , len2 = len2)
+
+
+# signup route
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    form = RegisterForm()
+
+    if form.validate_on_submit():
+        hashed_password = generate_password_hash(form.password.data, method='sha256')
+        user_type = request.form['user-type']
+        if user_type == "user":
+            new_user = User123(username=form.username.data, email=form.email.data, password=hashed_password)
+            # new_user = User(username=form.username.data, email=form.email.data, password=hashed_password)
+            db.session.add(new_user)
+            db.session.commit()
+        return redirect(url_for('login'))
+
+    return render_template('signup.html', form=form)
+
+#login route
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    form = LoginForm()
+
+    if form.validate_on_submit():
+        user_type = request.form['user-type']
+        if user_type == "user":
+            user = User123.query.filter_by(username=form.username.data).first()
+            # user = db.session.query(User).filter_by(username = form.username.data).first()
+            if user:
+                if check_password_hash(user.password, form.password.data):
+                    login_user(user , remember = form.remember.data )
+                    flash(f"Welcome {form.username.data}! , You have successfully logged in to our website." , 'success')
+                    return redirect(url_for('contact'))
+        elif user_type == "recruitor":
+            # recruitor = Recruitor.query.filter_by(username=form.username.data).first()
+            admin = db.session.query(Admin).filter_by(username = form.data.username).first()
+            if admin:
+                if admin.password == form.data.password:
+                    print("Successssss!!!!!")
+                    flash(f"Welcome {form.username.data}! , You have successfully logged in to our website as an Admin." , 'success')
+                    return redirect(url_for('admin'))
+        
+        flash("You have given wrong username or password , please try again." , "danger")
+        return redirect(url_for('login'))
+
+    return render_template('login.html', form=form)
