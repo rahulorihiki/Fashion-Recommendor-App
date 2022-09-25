@@ -94,6 +94,11 @@
                 class="btn float-right login_btn mt-3"
               />
             </div>
+            <input
+              type="hidden"
+              name="next"
+              value="{{ request.args.get('next', '') }}"
+            />
           </form>
         </div>
         <div class="card-footer">
