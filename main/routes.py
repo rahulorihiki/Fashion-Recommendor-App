@@ -8,11 +8,77 @@ from wtforms import StringField, PasswordField, BooleanField
 from wtforms.validators import InputRequired, Email, Length , ValidationError
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user , current_user , logout_user , login_required
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+import requests
+import io
+from PIL import Image
+import time
+
+# Webdriver Automation functions
+
+
+def get_images_from_google(wd, delay, max_images , val):
+	def scroll_down(wd):
+		wd.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+		time.sleep(delay)
+
+	url = f"https://www.google.com/search?q={val}&tbm=isch&ved=2ahUKEwjykJ779tbzAhXhgnIEHSVQBksQ2-cCegQIABAA&oq={val}&gs_lcp=CgNpbWcQAzIHCAAQsQMQQzIHCAAQsQMQQzIECAAQQzIECAAQQzIECAAQQzIECAAQQzIECAAQQzIECAAQQzIECAAQQzIECAAQQzoHCCMQ7wMQJ1C_31NYvOJTYPbjU2gCcAB4AIABa4gBzQSSAQMzLjOYAQCgAQGqAQtnd3Mtd2l6LWltZ8ABAQ&sclient=img&ei=7vZuYfLhOeGFytMPpaCZ2AQ&bih=817&biw=1707&rlz=1C1CHBF_enCA918CA918"
+	wd.get(url)
+
+	image_urls = set()
+	skips = 0
+
+	while len(image_urls) + skips < max_images:
+		scroll_down(wd)
+
+		thumbnails = wd.find_elements(By.CLASS_NAME, "Q4LuWd")
+
+		for img in thumbnails[len(image_urls) + skips:max_images]:
+			try:
+				img.click()
+				time.sleep(delay)
+			except:
+				continue
+
+			images = wd.find_elements(By.CLASS_NAME, "n3VNCb")
+			for image in images:
+				if image.get_attribute('src') in image_urls:
+					max_images += 1
+					skips += 1
+					break
+
+				if image.get_attribute('src') and 'http' in image.get_attribute('src'):
+					image_urls.add(image.get_attribute('src'))
+					print(f"Found {len(image_urls)}")
+
+	return image_urls
+
+
+# def download_image(download_path, url, file_name):
+# 	try:
+# 		image_content = requests.get(url).content
+# 		image_file = io.BytesIO(image_content)
+# 		image = Image.open(image_file)
+# 		file_path = download_path + file_name
+        
+# 		with open(file_path, "wb") as f:
+# 			image.save(f, "JPEG")
+
+# 		print("Success")
+# 	except Exception as e:
+# 		print('FAILED -', e)
 
 
 @login_manager.user_loader
 def load_user(user_id):
     return User123.query.get(int(user_id))
+
+
+
+# @login_manager.user_loader
+# def load_user(user_id):
+#     return User123.query.get(int(user_id))
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[InputRequired(), Length(min=4, max=15)])
@@ -196,7 +262,7 @@ def login():
                 if admin.password == form.password.data:
                     print("Successssss!!!!!")
                     flash(f"Welcome {form.username.data}! , You have successfully logged in to our website as an Admin." , 'success')
-                    return redirect(url_for('admin'))
+                    return redirect(url_for('admin_dashboard'))
         
         flash("You have given wrong username or password , please try again." , "danger")
         return redirect(url_for('login'))
@@ -223,3 +289,40 @@ def error_403(error):
 @app.errorhandler(500)
 def error_500(error):
     return render_template("500.html") , 500
+
+#Admin routes
+
+@app.route("/admin-dashboard")
+# @login_required
+def admin_dashboard():
+    return render_template("admin-dashboard.html")
+
+@app.route("/admin-userlist")
+# @login_required
+def admin_userlist():
+    return render_template("admin-user.html")
+
+
+@app.route("/admin-model-testing")
+# @login_required
+def admin_model_testing():
+    return render_template("admin-test-model.html")
+
+
+@app.route("/admin-add-images" , methods = ['GET' , 'POST'])
+# @login_required
+def admin_add_image():
+    val1 = request.form.get("imgsearch")
+    val2 = request.form.get("imgquantity")
+    urls = "noimages"
+    if request.method == 'POST':
+        PATH = "C:\\Program Files (x86)\\chromedriver.exe"
+        wd = webdriver.Chrome(PATH)
+        urls = get_images_from_google(wd, 1, int(val2) , val1)
+    return render_template("admin-addimg.html" , urls = urls)
+
+@app.route("/admin-remove-image" , methods = ['POST' , 'GET'])
+def admin_remove_image():
+    urls = request.args.get("a")
+    print(urls)
+    return redirect(url_for('admin_add_image'))
