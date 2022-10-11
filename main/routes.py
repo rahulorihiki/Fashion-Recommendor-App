@@ -300,7 +300,8 @@ def admin_dashboard():
 @app.route("/admin-userlist")
 # @login_required
 def admin_userlist():
-    return render_template("admin-user.html")
+    users = User123.query.all()
+    return render_template("admin-user.html" , users = users)
 
 
 @app.route("/admin-model-testing")
@@ -323,6 +324,15 @@ def admin_add_image():
 
 @app.route("/admin-remove-image" , methods = ['POST' , 'GET'])
 def admin_remove_image():
+    url = request.args.get("b")
     urls = request.args.get("a")
+    # print(url[1:-1])
+    print(url)
     print(urls)
-    return redirect(url_for('admin_add_image'))
+    res = urls[1:-1].strip('][').split(', ')
+    for i in range(len(res)):
+        res[i] = res[i][1:-1]
+    print(res[0])
+    res.remove(url)
+    print(res)
+    return render_template('admin-addimg.html' , urls = res)

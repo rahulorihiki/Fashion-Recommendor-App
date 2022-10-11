@@ -75,8 +75,16 @@
 </style>
 {% endblock style%} {% block body %}
 <div class="container">
-  <h2 class="mt-7">Search image to add to Database</h2>
-  <form class="d-flex my-3" role="search" , method="post">
+  <h2 class="mt-7" style="font-family: 'Fantasy', Times, serif">
+    Search image to add to Database
+  </h2>
+  <form
+    class="d-flex my-3"
+    role="search"
+    ,
+    method="post"
+    action="{{url_for('admin_add_image')}}"
+  >
     <input
       class="form-control me-2"
       type="search"
@@ -100,11 +108,15 @@
     </button>
   </form>
   {% if urls == "noimages" %}
-  <h2>Welcome , Enter the Images to be scraped in the above searchbar.</h2>
+  <h2 style="font-family: 'Fantasy', Times, serif">
+    Welcome , Enter the Images to be scraped in the above searchbar.
+  </h2>
   {% else %}
   <div class="container gallery-container mt-6">
     <br /><br />
-    <h4 class="mt-2">Google Search Results are as follows :</h4>
+    <h4 class="mt-2" style="font-family: 'Fantasy', Times, serif">
+      Google Search Results are as follows :
+    </h4>
 
     <!-- <p class="page-description text-center">Grid Layout With Zoom Effect</p> -->
 
@@ -115,7 +127,9 @@
           <a class="lightbox" href="{{url}}" target="_blank">
             <img src="{{url}}" alt="Bridge" />
           </a>
-          <a href="{{url_for('admin_remove_image' , a = urls)}}">cross</a>
+          <a href="{{url_for('admin_remove_image' , a = urls , b = url)}}"
+            >cross</a
+          >
         </div>
         {% endfor %}
       </div>
